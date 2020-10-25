@@ -116,9 +116,8 @@ class CartProducts {
     // возможно еще метод render нужно будет добавлять, т.к. чтобы формировать список.
   }
 
-  // метод, который добавляет товар в корзину.
-  pushProductToCart(id) {
-    const products = list.allProducts;
+  // метод, который добавляет товар в корзину. Передаем в качестве параметров каталога все продуктов, и id продукта, который добавляем. По этому id находим нужный продукт и добавляем его в корзину.
+  pushProductToCart(products, id) {
     for (const product of products) {
       if (product.id == id) {
         this.productsInCart.push(product);
