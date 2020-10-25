@@ -20,6 +20,7 @@
 	padding: 5px 20px 5px 20px;
 	color: black;
 	background-color: white;
+	border-radius: 4px;
 
 	&:hover {
 		background-color: lightsteelblue;
@@ -48,9 +49,11 @@
 	&__btn {
 		width: 100%;
 		padding: 3px 0;
+		border-radius: 4px;
 
 		&:hover {
 			cursor: pointer;
+			color: lightsteelblue;
 		}
 	}
 }
