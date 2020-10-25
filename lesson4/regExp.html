@@ -11,8 +11,8 @@
 <script>
 	'use strict';
 
-	const text = 
-		`One: 'Hi Mary.' Two: 'Oh, hi.'
+	const text = `
+		One: 'Hi Mary.' Two: 'Oh, hi.'
 		One: 'How are you doing?'
 		Two: 'I'm doing alright. How about you?'
 		One: 'Not too bad. The weather is great isn't it?'
@@ -29,6 +29,15 @@
 		Two: 'I'll see you next time.'
 		One: 'Sure.' Bye.'`;
 
+
+		// Задание 1. Заменяем одинарные кавычки на двойные
+		console.log(text.replace(/'/g, '"'));
+
+		// Задание 2. Добработал шаблон, чтобы одинарные кавычки внутри слова не заменялись.
+		console.log(text.replace(/\B'/g, '"'));
+
+
 		
-		</script>
+
+</script>
 </html>
