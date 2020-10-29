@@ -1,265 +1,267 @@
-const API = 'https://raw.githubusercontent.com/GeekBrainsTutorial/online-store-api/master/responses';
-
-// Переведено на промисы
-// let getRequest = (url) => {
-//     return new Promise((resolve, reject) => {
-//         let xhr = new XMLHttpRequest();
-//         xhr.open("GET", url, true);
-//         xhr.onreadystatechange = () => {
-//             if(xhr.readyState === 4){
-//                 if(xhr.status !== 200){
-//                     reject('Error');
-//                 } else {
-//                     resolve(xhr.responseText);
-//                 }
-//             }
-//         };
-//         xhr.send();
-//     })
-// };
-
-/**
- * Описываем базовые классы
- */
+const API = 'https://raw.githubusercontent.com/MaxiNCh/online-store-api/master/responses/';
 class List {
-  constructor(url, container, list = listContext){
-    this.container = container;
-    this.list = list; // словарь для классов строка 213
-    this.url = url;
-    this.goods = [];
-    this.allProducts = [];
-    this.filtered = []; // отфильтрованные товары
-    this._init();
-  }
+	constructor() {
+		this._goods = [];
+	}
 
-  /**
-   * получение данных с сервера
-   * @param url
-   * @returns {Promise<any | never>}
-   */
-  getJson(url){
-    return fetch(url ? url : `${API + this.url}`)
-      .then(result => result.json())
-      .catch(error => {
-        console.log(error);
-      })
-  }
+	_fetchProducts(url) {
+		return fetch(url).then(response => response.json());
+	}
 
-  /**
-   * обработка полученных данных
-   * @param data
-   */
-  handleData(data){
-    this.goods = [...data];
-    this.render();
-  }
+	_render(goods, element) {
+		const block = document.querySelector(element);
 
-  /**
-   * подсчет стоимости всех товаров
-   * @returns {*|number}
-   */
-  calcSum(){
-    return this.allProducts.reduce((accum, item) => accum += item.price, 0);
-  }
+		for (let product of goods) {
+			const productObject = new ProductItem(product);
+			block.insertAdjacentHTML('beforeend', productObject.renderProduct());
+		}
+	}
 
-  render(){
-    const block = document.querySelector(this.container);
-    for (let product of this.goods){
-      // console.log(this.constructor.name);
-      const productObj = new this.list[this.constructor.name](product);
-      // console.log(productObj);
-      this.allProducts.push(productObj);
-      block.insertAdjacentHTML('beforeend', productObj.render());
-    }
-  }
+	_addProducts(newGoods) {
+		if (this._goods.length == 0) {
+			this._goods = newGoods;
+		} else {
+			this._goods = [this._goods, ...newGoods];
+		}
+		this._render(this._goods, this.parentElement);
+	}
+}
 
-  /**
-   * метод поиска товаров
-   * @param value - поисковый запрос
-   */
-  filter(value){
-    const regexp = new RegExp(value, 'i');
-    this.filtered = this.allProducts.filter(product => regexp.test(product.product_name));
-    this.allProducts.forEach(el => {
+class Products extends List {
+	constructor(cart, parentElement = '.products', fileName = 'catalogData.json') {
+		super();
+		this.parentElement = parentElement;
+		this.cart = cart;
+		
+		this._allProducts = [];
+		this._catalogUrl = API + fileName;
+		this._addProductsBounded = this._addProducts.bind(this);
+		this._fetchProducts(this._catalogUrl).then(this._addProductsBounded);
+		this._init();
+		this._filtered = [];
+	}
+
+	filter(value) {
+		const regExp = new RegExp(value, 'i');
+		this._filtered = this._goods.filter(product => regExp.test(product.product_name));
+		this._goods.forEach(el => {
       const block = document.querySelector(`.product-item[data-id="${el.id_product}"]`);
-      if(!this.filtered.includes(el)){
+      if(!this._filtered.includes(el)){
         block.classList.add('invisible');
       } else {
         block.classList.remove('invisible');
       }
     })
-  }
-  _init(){
-    return false
-  }
-}
+	}
 
-class Item{
-  constructor(el, img = 'https://placehold.it/200x150'){
-    this.product_name = el.product_name;
-    this.price = el.price;
-    this.id_product = el.id_product;
-    this.img = img;
-  }
-  render(){
-    return ``;
-  }
-}
+	_init() {
+		document.querySelector(this.parentElement).addEventListener('click', (event) => {
+			if (event.target.classList.contains('product-item__btn')) {
+				let productId = event.target.dataset.id;
+				let productToAdd = this._goods.find(el => el.id_product == productId);
+				this.cart.pushProductToCart(productToAdd);
+			}
+		});
+		document.querySelector('.header__search-btn').addEventListener('click', (e) => {
+			e.preventDefault();
+			let filterValue = document.querySelector('.header__input').value;
+			if (filterValue.length > 2) {
+				this.filter(filterValue);
+			} else {
+				this.filter('');
+			}
+		});
+		document.querySelector('.header__input').onchange = () => {
+			let filterValue = document.querySelector('.header__input').value;
+			if (filterValue.length > 2) {
+				this.filter(filterValue);
+			} else {
+				this.filter('');
+			}
+		}
 
-/**
- * Наследуемся от базовых классов
- */
-class ProductsList extends List {
-  constructor(cart, container = '.products', url = "/catalogData.json"){
-    super(url, container);
-    this.cart = cart;
-    this.getJson()
-      .then(data => this.handleData(data));
-  }
 
-  _init(){
-    document.querySelector(this.container).addEventListener('click', e => {
-      if(e.target.classList.contains('buy-btn')){
-        this.cart.addProduct(e.target);
-      }
-    });
-    document.querySelector('.search-form').addEventListener('submit', e => {
-      e.preventDefault();
-      this.filter(document.querySelector('.search-field').value)
-    })
-  }
-}
-
-class ProductItem extends Item{
-  render() {
-    return `<div class="product-item" data-id="${this.id_product}">
-                <img src="${this.img}" alt="Some img">
-                <div class="desc">
-                    <h3>${this.product_name}</h3>
-                    <p>${this.price} ₽</p>
-                    <button class="buy-btn"
-                    data-id="${this.id_product}"
-                    data-name="${this.product_name}"
-                    data-price="${this.price}">Купить</button>
-                </div>
-            </div>`;
-  }
-}
-
-class Cart extends List{
-  constructor(container = ".cart-block", url = "/getBasket.json"){
-    super(url, container);
-    this.getJson()
-      .then(data => {
-        this.handleData(data.contents);
-      });
-  }
-
-  /**
-   * добавление товара
-   * @param element
-   */
-  addProduct(element){
-    this.getJson(`${API}/addToBasket.json`)
-      .then(data => {
-        if(data.result === 1){
-          let productId = +element.dataset['id'];
-          let find = this.allProducts.find(product => product.id_product === productId);
-          if(find){
-            find.quantity++;
-            this._updateCart(find);
-          } else {
-            let product = {
-              id_product: productId,
-              price: +element.dataset['price'],
-              product_name: element.dataset['name'],
-              quantity: 1
-            };
-            // goods - это своего рода "опорный" массив, отражающий список товаров, которые нужно отрендерить.
-            // При добавлении нового товара, нас интересует только он один.
-            this.goods = [product];
-            // далее вызывая метод render, мы добавим в allProducts только его, тем самым избегая лишнего перерендера.
-            this.render();
-          }
-        } else {
-          alert('Error');
-        }
-      })
-  }
-
-  /**
-   * удаление товара
-   * @param element
-   */
-  removeProduct(element){
-    this.getJson(`${API}/deleteFromBasket.json`)
-      .then(data => {
-        if(data.result === 1){
-          let productId = +element.dataset['id'];
-          let find = this.allProducts.find(product => product.id_product === productId);
-          if(find.quantity > 1){ // если товара > 1, то уменьшаем количество на 1
-            find.quantity--;
-            this._updateCart(find);
-          } else { // удаляем
-            this.allProducts.splice(this.allProducts.indexOf(find), 1);
-            document.querySelector(`.cart-item[data-id="${productId}"]`).remove();
-          }
-        } else {
-          alert('Error');
-        }
-      })
-  }
-
-  /**
-   * обновляем данные корзины
-   * @param product
-   * @private
-   */
-  _updateCart(product){
-    let block = document.querySelector(`.cart-item[data-id="${product.id_product}"]`);
-    block.querySelector('.product-quantity').textContent = `Количество: ${product.quantity}`;
-    block.querySelector('.product-price').textContent = `${product.quantity * product.price} ₽`;
-  }
-  _init(){
-    document.querySelector('.btn-cart').addEventListener('click', () => {
-      document.querySelector(this.container).classList.toggle('invisible');
-    });
-    document.querySelector(this.container).addEventListener('click', e => {
-      if(e.target.classList.contains('del-btn')){
-        this.removeProduct(e.target);
-      }
-    })
-  }
+	}
 
 }
 
-class CartItem extends Item{
-  constructor(el, img = 'https://placehold.it/50x100'){
-    super(el, img);
-    this.quantity = el.quantity;
-  }
-  render(){
-    return `<div class="cart-item" data-id="${this.id_product}">
-            <div class="product-bio">
-            <img src="${this.img}" alt="Some image">
-            <div class="product-desc">
-            <p class="product-title">${this.product_name}</p>
-            <p class="product-quantity">Количество: ${this.quantity}</p>
-        <p class="product-single-price">${this.price} за ед.</p>
-        </div>
-        </div>
-        <div class="right-block">
-            <p class="product-price">${this.quantity*this.price} ₽</p>
-            <button class="del-btn" data-id="${this.id_product}">&times;</button>
-        </div>
-        </div>`
-  }
+class ProductItem {
+	constructor(product) {
+		this.title = product.product_name;
+		this.price = product.price;
+		this.id = product.id_product;
+	}
+
+	renderProduct() {
+		return `
+			<div class="product-item" data-id="${this.id}">
+				<img class="product-item__img" src="https://picsum.photos/id/${this.id}/150" alt="img">
+				<h3 class="product - item__h3 ">${this.title}</h3> 
+				<p class = "product-item__p">${this.price} &#8381</p> 
+				<button data-id="${this.id}" class="product-item__btn">Добавить в корзину</button>
+			</div>`;
+}
 }
 
-const listContext = {
-  ProductsList: ProductItem,
-  Cart: CartItem
-};
+class CartProducts extends List {
+	constructor(parentElement = '.cart__body', fileName = 'addToBasket.json') {
+		super();
+		this.parentElement = parentElement;
 
-let cart = new Cart();
-let products = new ProductsList(cart);
+		this._catalogUrl = API + fileName;
+		this._productsInCart = [];
+		this._fetchProducts(this._catalogUrl).then(data => this._addArrayOfProducts)
+
+		this._init();
+	}
+
+	_addArrayOfProducts(array) {
+		if (array) {
+			document.querySelector('.cart__empty').classList.add('invisible')
+		}
+		for (let product of array) {
+			this.pushProductToCart(product, this._productsInCart);
+		}
+	}
+	// метод, который добавляет товар в корзину. 
+	pushProductToCart(product) {
+		document.querySelector('.cart__empty').classList.add('invisible');
+		document.querySelector('.header__cart-btn').classList.add('yellow');
+		let productsInCart = this._productsInCart;
+		let productId = product.id_product;
+		let productInCart = productsInCart.find(product => product.id_product == productId);
+		if (productInCart) {
+			productInCart.quantity++;
+			this.update(product);
+		} else {
+			product.quantity = 1;
+			productsInCart.push(product);
+			const newObject = new ItemInCart(product);      
+			document.querySelector(this.parentElement).insertAdjacentHTML('beforeend', newObject.render(product));
+		} 
+	};
+
+	update(product) {
+		let block = document.querySelector(`.cart__item[data-id="${product.id_product}"]`);
+		block.querySelector('.cart__item-qty').textContent = `Количество: ${product.quantity}`;
+		block.querySelector('.cart__item-price').textContent = `Стоимость: ${product.quantity * product.price} \u20BD`;
+	}
+
+	decreaseProductQty(id) {
+		let product = this._productsInCart.find(product => product.id_product == id);
+		product.quantity--;
+		if (product.quantity) {
+			this.update(product)
+		} else {
+			this.removeProduct(product);
+		}
+	}
+
+	removeProduct(product) {
+		document.querySelector(`.cart__item[data-id="${product.id_product}"]`).remove();
+		let index = this._productsInCart.indexOf(product);
+		this._productsInCart.splice(index, 1);
+		if (!this._productsInCart.length) {
+			document.querySelector('.cart__empty').classList.remove('invisible');
+			document.querySelector('.header__cart-btn').classList.remove('yellow');
+		}
+	}
+
+	// рассчитывает суммарную стоимость товаров в корзину
+	calculatePrice() {
+		cartProducts = this.productsInCart;
+		let sum;
+		for (const product of cartProducts) {
+			sum += product.price;
+		}
+		return sum;
+	}
+
+	_init() {
+		document.querySelector('.header__cart-btn').addEventListener('click', (e) => {
+			document.querySelector('.cart').classList.toggle('invisible');
+		});
+		document.querySelector('.cart').addEventListener('click', (e) => {
+			if (e.path.find(el => el.className == 'cart__remove-btn')) {
+				let productId = e.target.dataset.id;
+				this.decreaseProductQty(productId);
+			}
+		})
+	}
+
+}
+
+class ItemInCart {
+	constructor(product) {
+		this.title = product.product_name;
+		this.price = product.price;
+		this.id = product.id_product;
+		this.quantity = 1;
+	}
+	// аналогично ProductItem будет рендериться продукт на странице корзины.
+	render(product) {
+		return `
+		<div data-id=${this.id} class="cart__item">
+			<img class="cart__img" src="https://picsum.photos/id/${this.id}/50" alt="img">
+			<div class="cart__item-text">
+				<h5 class="cart__item-name">${this.title}</h5>
+				<p class="cart__item-qty">Количество: ${this.quantity}</p>
+				<p class="cart__item-price">Стоимость: ${this.quantity * this.price} &#8381</p>
+
+			</div>
+			<button data-id=${this.id} class="cart__remove-btn"><i data-id=${this.id} class="fas fa-trash-alt"></i></button>
+		</div>`
+	};
+}
+
+class Validation {
+	constructor() {
+		this._name = '';
+		this._phone = '';
+		this._email = '';
+		this._init();
+}
+
+	_validation(regExp, input) {
+		if (!regExp.test(input.value) && (input.value.length > 0)) {
+			input.classList.add('not-valid');
+		} else {
+			input.classList.remove('not-valid');
+		}
+	}
+	_nameValidation(name) {
+		const regExp = /^[a-zа-я]{3,}$/i;
+		this._validation(regExp, name);
+	}
+
+	_phoneValidation(phone) {
+		const regExp = /^\+7\(\d{3}\)\d{3}-\d{4}/;
+		this._validation(regExp, phone);
+	}
+
+	_emailValidation(email) {
+		const regExp = /^[\w.-]{3,20}@[a-z]{2,8}.(ru|com)/i;
+		this._validation(regExp, email);
+	}
+
+	_init() {
+		const nameInput = document.forms['responseForm']['name'];
+		const phoneInput = document.forms['responseForm']['phone'];
+		const emailInput = document.forms['responseForm']['mail'];
+		nameInput.onchange = () => {
+			this._nameValidation(nameInput);
+		}
+		phoneInput.onchange = () => {
+			this._phoneValidation(phoneInput);
+		}
+		emailInput.onchange = () => {
+			this._emailValidation(emailInput);
+		}
+	}
+
+}
+
+const cart = new CartProducts();
+const products = new Products(cart);
+const responseValidation = new Validation();
+
