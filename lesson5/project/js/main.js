@@ -6,6 +6,9 @@ const app = new Vue({
         catalogUrl: '/catalogData.json',
         products: [],
         imgCatalog: 'https://placehold.it/200x150',
+        searchValue: '',
+        isVisibleCart: false,
+        isCartEmpty: true
     },
     methods: {
         getJson(url) {
@@ -18,6 +21,27 @@ const app = new Vue({
         addProduct(product) {
             console.log(product.id_product)
         },
+        filterGoods(event, value) {
+            event.preventDefault();
+            console.log(value);
+            let regExp = new RegExp(value, 'i');
+            if (value.length > 2) {
+                this.products.forEach(product => {
+                    if (!regExp.test(product.product_name)) {
+                        product.isVisible = false;
+                    } else {
+                        product.isVisible = true;
+                    }
+                })
+            } else {
+                this.products.forEach(product => {
+                    product.isVisible = true;
+                })
+            }
+        },
+        toggleCart() {
+            this.isVisibleCart = !this.isVisibleCart;
+        }
     },
     beforeCreate() {
         console.log('beforeCreate');
@@ -27,6 +51,7 @@ const app = new Vue({
         this.getJson(`${API}${this.catalogUrl}`)
             .then(data => {
                 for (el of data) {
+                    el.isVisible = true;
                     this.products.push(el);
                 }
             });
