@@ -37,18 +37,18 @@ const app = new Vue({
                   this.$refs.error.setError(error);
               });
         },
-        deleteJson(url, data) {
-            return fetch(url, {
-                method: 'DELETE',
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(data)
-            }).then(result => result.json())
-              .catch(error => {
-                  this.$refs.error.setError(error);
-              });
-        },
+        // deleteJson(url, data) {
+        //     return fetch(url, {
+        //         method: 'DELETE',
+        //         headers: {
+        //             "Content-Type": "application/json"
+        //         },
+        //         body: JSON.stringify(data)
+        //     }).then(result => result.json())
+        //       .catch(error => {
+        //           this.$refs.error.setError(error);
+        //       });
+        // },
     },
     mounted() {
         console.log(this);

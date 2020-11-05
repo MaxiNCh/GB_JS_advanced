@@ -18,7 +18,7 @@ const handler = (req, res, action, file) => {
         } else {
           res.send('{"result": 1}');
         }
-      })
+      });
     }
   });
 };
